@@ -1,12 +1,12 @@
 from flask import render_template, url_for, redirect, g, request, flash, session, abort
 from werkzeug.security import generate_password_hash
 from auth import app, db
-from forms import LoginForm, RegistrationForm, IdentityTokenForm
-from hooks import admin_required, login_required
-from models import User, IdentityToken, AccessToken
-from util import get_serializer
+from auth.forms import LoginForm, RegistrationForm, IdentityTokenForm
+from auth.hooks import admin_required, login_required
+from auth.models import User, IdentityToken, AccessToken
+from auth.util import get_serializer
 import datetime
-import email
+import auth.email as email
 import uuid
 
 # Views
@@ -56,11 +56,16 @@ def logout():
 def verify_email(payload):
     try:
         user_id = get_serializer().loads(payload)
-    except BadSignature:
-        abort(404)
+    except:
+        flash('Bad Signature!')
+        return redirect(url_for('index'))
+
     user = User.query.get_or_404(user_id)
+    print("user_id=", user_id)
+    print("g.user=", g.user)
     if user != g.user:
         abort(403)
+    print("verified=OK!")
     user.verified = True
     db.session.commit()
     flash('E-mail verification successful - thank you!')
@@ -85,6 +90,7 @@ def admin_access():
 def access():
     access_tokens = list(g.user.access_tokens.order_by(
         db.desc(AccessToken.client_timestamp)).limit(100))
+    print("access_tokens=", access_tokens)
     return render_template('access_tokens.html',
         access_tokens=access_tokens)
 
@@ -119,6 +125,7 @@ def identity_delete(identity_token_id):
 
 @app.route('/api/1/identity', methods=['POST'])
 def api_identity():
+    print("api/1/identity!")
     form = request.form
     user = User.query.filter_by(username=form['username']).first()
     if user is None:
@@ -145,6 +152,7 @@ def api_identity():
 
 @app.route('/api/1/access', methods=['POST'])
 def api_access():
+    print("POST api/1/access")
     form = request.form
     user = User.query.filter_by(username=form['username']).first()
     if user is None:

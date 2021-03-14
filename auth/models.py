@@ -1,6 +1,6 @@
 from flask import url_for
 from auth import db
-from util import get_serializer
+from auth.util import get_serializer
 from werkzeug.security import check_password_hash
 import datetime
 
@@ -85,6 +85,7 @@ class AccessToken(db.Model):
     def age(self):
         return datetime.datetime.utcnow() - self.client_timestamp
     def check_token(self, token, max_age):
+        print("checking token:", token)
         if self.age > max_age:
             return False
         return check_password_hash(self.token, token)
